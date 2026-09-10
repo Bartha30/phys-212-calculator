@@ -34,6 +34,9 @@ it's one self-contained HTML file with inline CSS and vanilla JavaScript.
   A- ≥ 900, … D- ≥ 600, F < 600), and a progress bar.
 - **Fill example** loads a sample mid-semester scenario; **Reset** clears all
   inputs.
+- A light/dark theme toggle in the header switches between the two themes and
+  remembers your choice in `localStorage` (key `phys212-theme`), defaulting to
+  dark mode on first visit.
 
 ## Notes and limitations
 

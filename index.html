@@ -5,13 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PHYS 212 Mark Calculator (Fall 2026)</title>
   <style>
+    /* Light theme (default palette) */
     :root{
       --text:#2C2C2B; --muted:#7D7A75; --bg:#FFFFFF; --soft:#F9F8F7; --surface:#F0EFED; --border:#E6E5E3;
+      --field:#FFFFFF; --onBlue:#FFFFFF; --barTo:#5E9FE8;
       --blue:#2783DE; --blueSoft:#E5F2FC; --green:#46A171; --orange:#D5803B; --red:#E56458;
       --radius:12px;
+      color-scheme:light;
+    }
+    /* Dark theme */
+    :root[data-theme="dark"]{
+      --text:#E7E5E2; --muted:#9A968F; --bg:#1B1B1A; --soft:#232322; --surface:#2C2C2A; --border:#3A3A37;
+      --field:#161615; --onBlue:#FFFFFF; --barTo:#5E9FE8;
+      --blue:#3B93E6; --blueSoft:#22384B; --green:#5BB98A; --orange:#E0975A; --red:#EB7D72;
+      color-scheme:dark;
     }
     *{box-sizing:border-box}
-    body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
+    body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg);transition:background .2s ease,color .2s ease}
     .wrap{max-width:980px;margin:0 auto;padding:28px 20px 48px}
     header{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
     h1{font-size:28px;line-height:1.2;margin:0 0 6px}
@@ -29,7 +39,7 @@
     th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left}
     tr:last-child td{border-bottom:none}
 
-    input[type="number"]{width:110px;max-width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text)}
+    input[type="number"]{width:110px;max-width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--field);color:var(--text)}
     input[type="number"]:focus{outline:2px solid var(--blueSoft);border-color:var(--blue)}
 
     .rowTitle{font-weight:600}
@@ -38,23 +48,37 @@
     .summary{padding:16px}
     .big{font-size:34px;line-height:1.1;margin:2px 0 8px}
     .bar{height:10px;border-radius:999px;background:var(--surface);overflow:hidden;border:1px solid var(--border)}
-    .bar > div{height:100%;background:linear-gradient(90deg,var(--blue),#5E9FE8);width:0%}
+    .bar > div{height:100%;background:linear-gradient(90deg,var(--blue),var(--barTo));width:0%}
     .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
-    .kpi{padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:#fff}
+    .kpi{padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--field)}
     .kpi .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
     .kpi .value{font-size:18px;font-weight:650;margin-top:2px}
 
-    .gradeTable{margin-top:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff}
+    .gradeTable{margin-top:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--field)}
     .gradeTable table th,.gradeTable table td{padding:9px 10px}
 
     .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-    button{border:1px solid var(--border);background:#fff;color:var(--text);padding:10px 12px;border-radius:12px;font-weight:600;cursor:pointer}
-    button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+    button{border:1px solid var(--border);background:var(--field);color:var(--text);padding:10px 12px;border-radius:12px;font-weight:600;cursor:pointer}
+    button.primary{background:var(--blue);border-color:var(--blue);color:var(--onBlue)}
     button:active{transform:translateY(1px)}
+
+    .headerSide{display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+    @media (max-width: 860px){.headerSide{align-items:flex-start}}
+    .themeToggle{font-size:13px;padding:8px 12px;display:inline-flex;align-items:center;gap:8px;background:var(--soft);color:var(--muted)}
+    .themeToggle .ico{font-size:14px;line-height:1}
 
     .note{margin-top:10px;color:var(--muted);font-size:13px}
     .warn{color:var(--orange)}
   </style>
+  <script>
+    // Apply the saved theme before first paint to avoid a flash. Defaults to dark.
+    (function(){
+      var t;
+      try { t = localStorage.getItem('phys212-theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') t = 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
 </head>
 <body>
   <div class="wrap">
@@ -63,7 +87,13 @@
         <h1>PHYS 212 Mark Calculator</h1>
         <div class="sub">Enter your <b>points earned</b> in each category. The calculator uses the syllabus point totals (out of <b>1000</b>) and estimates your current standing and a projected letter grade.</div>
       </div>
-      <div class="pill" title="Based on PHYS 212 Fall 2026 syllabus">Total points: <b>1000</b> · Bonus available: <b>25</b></div>
+      <div class="headerSide">
+        <button type="button" id="themeToggle" class="themeToggle" aria-pressed="true" title="Toggle light / dark theme">
+          <span class="ico" id="themeIcon" aria-hidden="true">🌙</span>
+          <span id="themeLabel">Dark</span>
+        </button>
+        <div class="pill" title="Based on PHYS 212 Fall 2026 syllabus">Total points: <b>1000</b> · Bonus available: <b>25</b></div>
+      </div>
     </header>
 
     <div class="grid">
@@ -267,6 +297,31 @@
     }
     recalc();
   });
+
+  // Light / dark theme toggle, persisted in localStorage (defaults to dark).
+  (function(){
+    const root = document.documentElement;
+    const btn = document.getElementById('themeToggle');
+    const icon = document.getElementById('themeIcon');
+    const label = document.getElementById('themeLabel');
+
+    function apply(theme){
+      root.setAttribute('data-theme', theme);
+      const dark = theme === 'dark';
+      icon.textContent = dark ? '🌙' : '☀️';
+      label.textContent = dark ? 'Dark' : 'Light';
+      btn.setAttribute('aria-pressed', String(dark));
+    }
+
+    let current = root.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    apply(current);
+
+    btn.addEventListener('click', () => {
+      current = current === 'dark' ? 'light' : 'dark';
+      apply(current);
+      try { localStorage.setItem('phys212-theme', current); } catch (e) {}
+    });
+  })();
 
   buildRows();
   recalc();
