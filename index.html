@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PHYS 212 Mark Calculator (Fall 2026)</title>
+  <style>
+    :root{
+      --text:#2C2C2B; --muted:#7D7A75; --bg:#FFFFFF; --soft:#F9F8F7; --surface:#F0EFED; --border:#E6E5E3;
+      --blue:#2783DE; --blueSoft:#E5F2FC; --green:#46A171; --orange:#D5803B; --red:#E56458;
+      --radius:12px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:var(--bg)}
+    .wrap{max-width:980px;margin:0 auto;padding:28px 20px 48px}
+    header{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+    h1{font-size:28px;line-height:1.2;margin:0 0 6px}
+    .sub{color:var(--muted);max-width:62ch}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:var(--soft);color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;margin-top:18px}
+    @media (max-width: 860px){.grid{grid-template-columns:1fr}}
+
+    .card{border:1px solid var(--border);border-radius:var(--radius);background:var(--soft)}
+    .card h2{margin:0;padding:16px 16px 0;font-size:16px}
+    .card .body{padding:14px 16px 16px}
+
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    th,td{padding:10px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+    th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left}
+    tr:last-child td{border-bottom:none}
+
+    input[type="number"]{width:110px;max-width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text)}
+    input[type="number"]:focus{outline:2px solid var(--blueSoft);border-color:var(--blue)}
+
+    .rowTitle{font-weight:600}
+    .tiny{font-size:12px;color:var(--muted)}
+
+    .summary{padding:16px}
+    .big{font-size:34px;line-height:1.1;margin:2px 0 8px}
+    .bar{height:10px;border-radius:999px;background:var(--surface);overflow:hidden;border:1px solid var(--border)}
+    .bar > div{height:100%;background:linear-gradient(90deg,var(--blue),#5E9FE8);width:0%}
+    .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+    .kpi{padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:#fff}
+    .kpi .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+    .kpi .value{font-size:18px;font-weight:650;margin-top:2px}
+
+    .gradeTable{margin-top:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff}
+    .gradeTable table th,.gradeTable table td{padding:9px 10px}
+
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    button{border:1px solid var(--border);background:#fff;color:var(--text);padding:10px 12px;border-radius:12px;font-weight:600;cursor:pointer}
+    button.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+    button:active{transform:translateY(1px)}
+
+    .note{margin-top:10px;color:var(--muted);font-size:13px}
+    .warn{color:var(--orange)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>PHYS 212 Mark Calculator</h1>
+        <div class="sub">Enter your <b>points earned</b> in each category. The calculator uses the syllabus point totals (out of <b>1000</b>) and estimates your current standing and a projected letter grade.</div>
+      </div>
+      <div class="pill" title="Based on PHYS 212 Fall 2026 syllabus">Total points: <b>1000</b> · Bonus available: <b>25</b></div>
+    </header>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Enter your points</h2>
+        <div class="body">
+          <table aria-label="Points input table">
+            <thead>
+              <tr>
+                <th style="width:34%">Category</th>
+                <th style="width:18%">Max</th>
+                <th style="width:24%">Earned</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+
+          <div class="actions">
+            <button class="primary" id="fillExample">Fill example</button>
+            <button id="reset">Reset</button>
+          </div>
+          <div class="note">
+            <span class="warn">Drops/late policies aren’t modeled automatically.</span> Just enter the points you currently see in your gradebook for each category.
+          </div>
+        </div>
+      </section>
+
+      <aside class="card">
+        <h2>Results</h2>
+        <div class="summary">
+          <div class="tiny">Projected total (points)</div>
+          <div class="big"><span id="totalPts">0</span> / 1000</div>
+          <div class="bar" aria-hidden="true"><div id="barFill"></div></div>
+
+          <div class="kpis">
+            <div class="kpi">
+              <div class="label">Percent</div>
+              <div class="value"><span id="percent">0.0</span>%</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Letter grade</div>
+              <div class="value" id="letter">—</div>
+            </div>
+          </div>
+
+          <div class="gradeTable" style="margin-top:16px">
+            <table aria-label="Grade cutoffs">
+              <thead>
+                <tr><th>Grade</th><th>Min points</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="rowTitle">A+</td><td>970</td></tr>
+                <tr><td class="rowTitle">A</td><td>930</td></tr>
+                <tr><td class="rowTitle">A-</td><td>900</td></tr>
+                <tr><td class="rowTitle">B+</td><td>870</td></tr>
+                <tr><td class="rowTitle">B</td><td>830</td></tr>
+                <tr><td class="rowTitle">B-</td><td>800</td></tr>
+                <tr><td class="rowTitle">C+</td><td>770</td></tr>
+                <tr><td class="rowTitle">C</td><td>730</td></tr>
+                <tr><td class="rowTitle">C-</td><td>700</td></tr>
+                <tr><td class="rowTitle">D+</td><td>670</td></tr>
+                <tr><td class="rowTitle">D</td><td>630</td></tr>
+                <tr><td class="rowTitle">D-</td><td>600</td></tr>
+                <tr><td class="rowTitle">F</td><td>&lt; 600</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="note">Tip: if you haven’t done a category yet, leave it blank/0 — the calculator will treat it as 0 earned.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+<script>
+  const categories = [
+    { key: 'prelectures', name: 'Prelectures', max: 25 },
+    { key: 'checkpoints', name: 'Checkpoints', max: 25 },
+    { key: 'lecture', name: 'Lecture (Participation)', max: 50 },
+    { key: 'homework', name: 'Homework', max: 130 },
+    { key: 'discussionQuizzes', name: 'Discussion quizzes', max: 130 },
+    { key: 'labs', name: 'Labs', max: 120 },
+    { key: 'hourExam1', name: 'Hour exam 1', max: 80 },
+    { key: 'hourExam2', name: 'Hour exam 2', max: 80 },
+    { key: 'hourExam3', name: 'Hour exam 3', max: 80 },
+    { key: 'finalExam', name: 'Final exam', max: 280 },
+    { key: 'bonus', name: 'Bonus (optional)', max: 25, isBonus: true },
+  ];
+
+  const gradeCutoffs = [
+    { letter: 'A+', min: 970 },
+    { letter: 'A',  min: 930 },
+    { letter: 'A-', min: 900 },
+    { letter: 'B+', min: 870 },
+    { letter: 'B',  min: 830 },
+    { letter: 'B-', min: 800 },
+    { letter: 'C+', min: 770 },
+    { letter: 'C',  min: 730 },
+    { letter: 'C-', min: 700 },
+    { letter: 'D+', min: 670 },
+    { letter: 'D',  min: 630 },
+    { letter: 'D-', min: 600 },
+    { letter: 'F',  min: -Infinity },
+  ];
+
+  function clamp(n, lo, hi){
+    if (Number.isNaN(n)) return lo;
+    return Math.min(hi, Math.max(lo, n));
+  }
+
+  function letterFor(points){
+    for (const g of gradeCutoffs){
+      if (points >= g.min) return g.letter;
+    }
+    return '—';
+  }
+
+  function buildRows(){
+    const tbody = document.getElementById('rows');
+    tbody.innerHTML = '';
+
+    for (const c of categories){
+      const tr = document.createElement('tr');
+
+      const tdName = document.createElement('td');
+      tdName.innerHTML = `<div class="rowTitle">${c.name}</div>`;
+
+      const tdMax = document.createElement('td');
+      tdMax.textContent = c.max;
+
+      const tdEarned = document.createElement('td');
+      tdEarned.innerHTML = `
+        <input type="number" inputmode="decimal" min="0" step="0.1" id="in_${c.key}" placeholder="0" aria-label="${c.name} earned points" />
+      `;
+
+      const tdNotes = document.createElement('td');
+      tdNotes.innerHTML = c.isBonus
+        ? `<span class="tiny">Up to 25 (doesn’t change the /1000 denominator here).</span>`
+        : `<span class="tiny">Enter your current points in gradebook.</span>`;
+
+      tr.append(tdName, tdMax, tdEarned, tdNotes);
+      tbody.appendChild(tr);
+    }
+
+    for (const c of categories){
+      const el = document.getElementById(`in_${c.key}`);
+      el.addEventListener('input', recalc);
+    }
+  }
+
+  function recalc(){
+    let total = 0;
+    let bonus = 0;
+
+    for (const c of categories){
+      const el = document.getElementById(`in_${c.key}`);
+      const raw = parseFloat(el.value);
+      const val = clamp(raw || 0, 0, c.max);
+      if (c.isBonus) bonus += val;
+      else total += val;
+    }
+
+    // Total course points are out of 1000. Bonus points can push above 1000 in practice,
+    // but we keep the display anchored to the syllabus 1000-point base.
+    const totalWithBonus = total + bonus;
+    const denom = 1000;
+
+    document.getElementById('totalPts').textContent = totalWithBonus.toFixed(1).replace(/\.0$/, '');
+    document.getElementById('percent').textContent = (100 * totalWithBonus / denom).toFixed(1);
+    document.getElementById('letter').textContent = letterFor(totalWithBonus);
+
+    const pct = clamp(100 * totalWithBonus / denom, 0, 120);
+    document.getElementById('barFill').style.width = `${pct}%`;
+  }
+
+  document.getElementById('reset').addEventListener('click', () => {
+    for (const c of categories){
+      document.getElementById(`in_${c.key}`).value = '';
+    }
+    recalc();
+  });
+
+  document.getElementById('fillExample').addEventListener('click', () => {
+    const example = {
+      prelectures: 20,
+      checkpoints: 19,
+      lecture: 44,
+      homework: 110,
+      discussionQuizzes: 95,
+      labs: 90,
+      hourExam1: 72,
+      hourExam2: 66,
+      hourExam3: 0,
+      finalExam: 0,
+      bonus: 5,
+    };
+    for (const c of categories){
+      const v = example[c.key];
+      document.getElementById(`in_${c.key}`).value = (v ?? '');
+    }
+    recalc();
+  });
+
+  buildRows();
+  recalc();
+</script>
+</body>
+</html>
